@@ -1,0 +1,70 @@
+{
+  "name": "@skyflow/mcp-sdk",
+  "version": "1.0.0",
+  "description": "Skyflow SDK for MCP - Easy PII/PHI deidentification for AI applications",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./mcp": {
+      "import": "./dist/mcp/index.js",
+      "types": "./dist/mcp/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "dependencies": {
+    "skyflow-node": "^2.0.0"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.19.0",
+    "zod": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@modelcontextprotocol/sdk": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.19.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0",
+    "zod": "^3.25.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "skyflow",
+    "mcp",
+    "model-context-protocol",
+    "pii",
+    "phi",
+    "deidentification",
+    "privacy",
+    "ai",
+    "llm"
+  ],
+  "license": "MIT",
+  "author": "Skyflow",
+  "packageManager": "pnpm@10.9.0"
+}
