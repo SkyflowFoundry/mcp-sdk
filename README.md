@@ -69,10 +69,13 @@ const { processedText: originalEmail } = await client.reidentify(user.email);
 
 ## MCP Server Integration
 
-Add pre-built Skyflow tools to your MCP server:
+Add pre-built Skyflow tools to your MCP server. This exposes `deidentify` and `reidentify` as MCP tools that LLMs can call directly:
 
 ```typescript
+import express from 'express';
+import { randomUUID } from 'crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerSkyflowTools } from '@skyflow/mcp-sdk/mcp';
 
 const server = new McpServer({ name: 'my-server', version: '1.0.0' });
@@ -84,7 +87,73 @@ await registerSkyflowTools(server, {
 });
 
 // Server now has 'deidentify' and 'reidentify' tools available
+
+const app = express();
+app.use(express.json());
+
+app.post('/mcp', async (req, res) => {
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+  });
+  await server.connect(transport);
+  await transport.handleRequest(req, res, req.body);
+});
+
+app.listen(3000);
 ```
+
+## Using Skyflow in Custom MCP Tools
+
+Use Skyflow inside your own MCP tools to automatically protect PII before processing:
+
+```typescript
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import { SkyflowMCP } from '@skyflow/mcp-sdk';
+
+const skyflow = new SkyflowMCP({
+  vaultId: 'vault-id',
+  vaultUrl: 'https://abc123.vault.skyflowapis.com',
+  credentials: { token: 'bearer-token' },
+});
+
+const server = new McpServer({ name: 'my-server', version: '1.0.0' });
+
+// Pattern 1: Manual deidentify/reidentify for full control
+server.registerTool(
+  'process-request',
+  {
+    description: 'Process a customer request',
+    inputSchema: { text: z.string() },
+  },
+  async ({ text }) => {
+    const { processedText: protected_ } = await skyflow.deidentify(text);
+    const result = await processWithExternalAPI(protected_);
+    const { processedText: restored } = await skyflow.reidentify(result);
+    return { content: [{ type: 'text', text: restored }] };
+  }
+);
+
+// Pattern 2: Use wrap() for cleaner code
+server.registerTool(
+  'analyze-message',
+  {
+    description: 'Analyze a message with AI',
+    inputSchema: { message: z.string() },
+  },
+  async ({ message }) => {
+    const result = await skyflow.wrap(message, async (protectedMessage) => {
+      return await callExternalAI(protectedMessage);
+    });
+    return { content: [{ type: 'text', text: result }] };
+  }
+);
+```
+
+See the [examples](./examples) directory for complete working examples:
+- [custom-tool-with-skyflow.ts](./examples/custom-tool-with-skyflow.ts) - Custom tools with PII protection
+- [ai-agent-with-skyflow.ts](./examples/ai-agent-with-skyflow.ts) - AI agent calling external LLMs
+- [hybrid-skyflow-tools.ts](./examples/hybrid-skyflow-tools.ts) - Combining pre-built and custom tools
 
 ## Configuration
 
