@@ -8,6 +8,11 @@ export {
   registerSkyflowTools,
   registerSkyflowToolsFromEnv,
   type RegisterToolsOptions,
+  type McpServerLike,
+  type CallToolResult,
+  type TextContent,
+  type RequestHandlerExtra,
+  type ToolHandler,
 } from "./register.js";
 
 export {

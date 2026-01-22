@@ -18,20 +18,62 @@ export interface RegisterToolsOptions {
 }
 
 /**
- * MCP Server interface (minimal subset we need)
- * This allows us to work with any MCP server implementation
+ * Content block types for MCP tool results
  */
-interface McpServerLike {
-  registerTool(
+export interface TextContent {
+  type: "text";
+  text: string;
+}
+
+/**
+ * MCP CallToolResult structure matching the official MCP SDK
+ */
+export interface CallToolResult {
+  [x: string]: unknown;
+  content: TextContent[];
+  structuredContent?: Record<string, unknown>;
+  isError?: boolean;
+}
+
+/**
+ * Handler extra context provided by MCP server
+ */
+export interface RequestHandlerExtra {
+  sessionId?: string;
+}
+
+/**
+ * Tool handler function signature matching the MCP SDK.
+ * When a tool has an inputSchema, the handler receives (args, extra).
+ */
+export type ToolHandler = (
+  args: Record<string, unknown>,
+  extra: RequestHandlerExtra
+) => CallToolResult | Promise<CallToolResult>;
+
+/**
+ * MCP Server interface (minimal subset we need)
+ * Compatible with @modelcontextprotocol/sdk McpServer
+ *
+ * Note: The actual McpServer has complex conditional callback types.
+ * This interface uses a generic callback to match both zero-arg and with-arg patterns.
+ */
+export interface McpServerLike {
+  registerTool<InputArgs = unknown>(
     name: string,
     definition: {
-      title: string;
-      description: string;
-      inputSchema: Record<string, unknown>;
-      outputSchema: Record<string, unknown>;
+      title?: string;
+      description?: string;
+      inputSchema?: InputArgs;
+      outputSchema?: unknown;
     },
-    handler: (args: Record<string, unknown>) => Promise<unknown>
-  ): void;
+    handler: InputArgs extends undefined
+      ? (extra: RequestHandlerExtra) => CallToolResult | Promise<CallToolResult>
+      : (
+          args: Record<string, unknown>,
+          extra: RequestHandlerExtra
+        ) => CallToolResult | Promise<CallToolResult>
+  ): unknown;
 }
 
 /**
@@ -83,9 +125,7 @@ export async function registerSkyflowTools(
         inputSchema: deidentifyTool.inputSchema,
         outputSchema: deidentifyTool.outputSchema,
       },
-      deidentifyTool.handler as (
-        args: Record<string, unknown>
-      ) => Promise<unknown>
+      (args: Record<string, unknown>) => deidentifyTool.handler(args as Parameters<typeof deidentifyTool.handler>[0])
     );
   }
 
@@ -100,9 +140,7 @@ export async function registerSkyflowTools(
         inputSchema: reidentifyTool.inputSchema,
         outputSchema: reidentifyTool.outputSchema,
       },
-      reidentifyTool.handler as (
-        args: Record<string, unknown>
-      ) => Promise<unknown>
+      (args: Record<string, unknown>) => reidentifyTool.handler(args as Parameters<typeof reidentifyTool.handler>[0])
     );
   }
 }
